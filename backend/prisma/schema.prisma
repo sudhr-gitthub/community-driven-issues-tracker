@@ -1,0 +1,70 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [postgis]
+}
+
+model User {
+  id          String   @id @default(uuid())
+  name        String?  // Full Name
+  username    String   @unique // Unique Username
+  email       String   @unique
+  phoneNumber String?  @unique // Optional but unique if present
+  password    String   @default("") // Temporary default for existing users
+  role        Role     @default(USER)
+  createdAt   DateTime @default(now())
+  issues      Issue[]
+
+  @@map("users")
+}
+
+model Issue {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  category    String
+  images      String[]
+  status      Status   @default(REPORTED)
+  
+  // AI Verification Fields
+  aiStatus    AiStatus @default(PENDING)
+  aiConfidence Float?   @default(0.0)
+  aiAnalysis  String?  // Explanation of the analysis
+
+  // PostGIS location type
+  location    Unsupported("geography(Point, 4326)")?
+
+  reportedBy  String
+  user        User     @relation(fields: [reportedBy], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("issues")
+}
+
+enum AiStatus {
+  PENDING
+  REAL
+  FAKE
+  UNCERTAIN
+}
+
+enum Role {
+  USER
+  ADMIN
+  MODERATOR
+}
+
+enum Status {
+  REPORTED
+  UNDER_REVIEW
+  IN_PROGRESS
+  RESOLVED
+  REJECTED
+}

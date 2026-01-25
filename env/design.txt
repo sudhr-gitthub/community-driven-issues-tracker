@@ -1,0 +1,161 @@
+# =====================================================
+# GLOBAL DESIGN CONFIG
+# =====================================================
+
+DESIGN_THEME=modern-community
+DESIGN_MODE=light
+DESIGN_MOBILE_FIRST=true
+
+# =====================================================
+# BRAND COLORS (PRIMARY PALETTE)
+# =====================================================
+
+COLOR_PRIMARY_900=#064E3B
+COLOR_PRIMARY_700=#0F766E
+COLOR_PRIMARY_500=#14B8A6
+COLOR_PRIMARY_300=#5EEAD4
+COLOR_PRIMARY_100=#CCFBF1
+
+# =====================================================
+# NEUTRAL COLORS
+# =====================================================
+
+COLOR_NEUTRAL_900=#111827
+COLOR_NEUTRAL_700=#374151
+COLOR_NEUTRAL_500=#6B7280
+COLOR_NEUTRAL_300=#D1D5DB
+COLOR_NEUTRAL_100=#F9FAFB
+
+# =====================================================
+# STATUS COLORS (ISSUE LIFECYCLE)
+# =====================================================
+
+STATUS_REPORTED=#EF4444
+STATUS_IN_PROGRESS=#F59E0B
+STATUS_ASSIGNED=#3B82F6
+STATUS_RESOLVED=#22C55E
+STATUS_REJECTED=#6B7280
+
+# =====================================================
+# UTILITY COLORS
+# =====================================================
+
+COLOR_INFO=#0EA5E9
+COLOR_WARNING=#FACC15
+COLOR_SUCCESS=#16A34A
+COLOR_ERROR=#DC2626
+
+# =====================================================
+# TYPOGRAPHY
+# =====================================================
+
+FONT_HEADING="DM Sans"
+FONT_BODY="Inter"
+FONT_METRIC="Space Grotesk"
+
+FONT_SIZE_H1=32
+FONT_SIZE_H2=24
+FONT_SIZE_H3=20
+FONT_SIZE_BODY_LG=16
+FONT_SIZE_BODY_SM=14
+FONT_SIZE_CAPTION=12
+FONT_SIZE_BUTTON=14
+
+FONT_WEIGHT_REGULAR=400
+FONT_WEIGHT_MEDIUM=500
+FONT_WEIGHT_SEMIBOLD=600
+FONT_WEIGHT_BOLD=700
+
+# =====================================================
+# SPACING SYSTEM (px)
+# =====================================================
+
+SPACE_1=4
+SPACE_2=8
+SPACE_3=12
+SPACE_4=16
+SPACE_5=24
+SPACE_6=32
+
+# =====================================================
+# BORDER RADIUS
+# =====================================================
+
+RADIUS_SM=6
+RADIUS_MD=12
+RADIUS_LG=20
+RADIUS_FULL=999
+
+# =====================================================
+# SHADOWS
+# =====================================================
+
+SHADOW_SM=0_1px_3px_rgba(0,0,0,0.08)
+SHADOW_MD=0_4px_12px_rgba(0,0,0,0.08)
+SHADOW_LG=0_10px_25px_rgba(0,0,0,0.12)
+
+# =====================================================
+# BUTTON STYLES
+# =====================================================
+
+BUTTON_PRIMARY_BG=#14B8A6
+BUTTON_PRIMARY_TEXT=#FFFFFF
+BUTTON_SECONDARY_BORDER=#14B8A6
+BUTTON_DANGER_BG=#DC2626
+
+# =====================================================
+# CARD COMPONENT
+# =====================================================
+
+CARD_RADIUS=12
+CARD_PADDING=16
+CARD_SHADOW=SHADOW_MD
+CARD_HOVER_ELEVATION=true
+
+# =====================================================
+# MAP CONFIG (UI ONLY)
+# =====================================================
+
+MAP_MARKER_REPORTED=#EF4444
+MAP_MARKER_IN_PROGRESS=#F59E0B
+MAP_MARKER_ASSIGNED=#3B82F6
+MAP_MARKER_RESOLVED=#22C55E
+MAP_DEFAULT_ZOOM=14
+MAP_FOCUS_MODE=true
+
+# =====================================================
+# ICON SYSTEM
+# =====================================================
+
+ICON_LIBRARY=lucide
+ICON_STYLE=outline
+ICON_ACTIVE_STYLE=filled
+
+# =====================================================
+# ANIMATION & INTERACTION
+# =====================================================
+
+ANIMATION_FAST=150ms
+ANIMATION_MEDIUM=250ms
+ANIMATION_SLOW=400ms
+HOVER_LIFT=true
+RIPPLE_EFFECT=true
+
+# =====================================================
+# ADMIN DASHBOARD (CIVIC CLEAN)
+# =====================================================
+
+ADMIN_THEME=civic-clean
+ADMIN_PRIMARY=#1E3A8A
+ADMIN_ACCENT=#16A34A
+ADMIN_WARNING=#F59E0B
+ADMIN_ERROR=#DC2626
+ADMIN_FONT="Inter"
+
+# =====================================================
+# ACCESSIBILITY
+# =====================================================
+
+ACCESSIBILITY_HIGH_CONTRAST=false
+ACCESSIBILITY_REDUCED_MOTION=false
+MIN_TOUCH_TARGET=44
