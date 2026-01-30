@@ -238,4 +238,3 @@ Thanks to the open-source community for feedback and contributions.
 ## Contact
 
 For questions, open an issue or contact the maintainer: https://github.com/sudhr-gitthub
->>>>>>> 97b29e9f631d0a57a5de78a1747dd443a49398a4
