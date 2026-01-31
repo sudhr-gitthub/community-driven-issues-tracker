@@ -3,18 +3,10 @@ import { Link } from 'react-router-dom';
 import { User, Clock } from 'lucide-react';
 import { getUserIssues } from '../services/api';
 
-interface Issue {
-  id: string;
-  title: string;
-  category: string;
-  status: string;
-  createdAt: string;
-}
-
 export default function UserProfile() {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const storedUserId = localStorage.getItem('civic_user_id');

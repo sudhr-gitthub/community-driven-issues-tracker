@@ -11,22 +11,15 @@ const defaultCenter = {
   lng: -73.935242
 };
 
-interface MapComponentProps {
-  markers?: Array<{ lat: number; lng: number; id?: string }>;
-  onMapClick?: (e: google.maps.MapMouseEvent) => void;
-  center?: { lat: number; lng: number };
-  zoom?: number;
-}
-
-export default function MapComponent({ markers = [], onMapClick, center, zoom = 12 }: MapComponentProps) {
+export default function MapComponent({ markers = [], onMapClick, center, zoom = 12 }) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
   });
 
-  const [_map, setMap] = useState<google.maps.Map | null>(null);
+  const [_map, setMap] = useState(null);
 
-  const onLoad = useCallback((map: google.maps.Map) => {
+  const onLoad = useCallback((map) => {
     setMap(map);
   }, []);
 

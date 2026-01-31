@@ -4,20 +4,6 @@ import { ArrowLeft, MapPin, Calendar, CheckCircle, Clock, AlertTriangle, XCircle
 import { getIssueById, deleteIssue, updateIssue } from '../services/api';
 import MapComponent from '../components/MapComponent';
 
-interface Issue {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  status: 'REPORTED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
-  createdAt: string;
-  aiStatus: 'PENDING' | 'REAL' | 'FAKE' | 'UNCERTAIN';
-  aiConfidence: number;
-  aiAnalysis: string;
-  reportedBy: string; // Needed for ownership check
-  // location is ignored for UI simplicity for now
-}
-
 const statusConfig = {
   REPORTED: { icon: AlertTriangle, color: 'text-red-600', bg: 'bg-red-50', label: 'Reported' },
   IN_PROGRESS: { icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50', label: 'In Progress' },
@@ -26,9 +12,9 @@ const statusConfig = {
 };
 
 export default function IssueDetail() {
-  const { id } = useParams<{ id: string }>();
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [issue, setIssue] = useState<Issue | null>(null);
+  const [issue, setIssue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({ title: '', description: '', category: '' });
@@ -42,7 +28,7 @@ export default function IssueDetail() {
   }, [id]);
 
   const loadIssue = () => {
-    getIssueById(id!)
+    getIssueById(id)
         .then(data => {
           setIssue(data);
           setEditForm({ 
@@ -58,7 +44,7 @@ export default function IssueDetail() {
   const handleDelete = async () => {
     if (window.confirm('Are you sure you want to delete this report? This action cannot be undone.')) {
       try {
-        await deleteIssue(id!);
+        await deleteIssue(id);
         alert('Report deleted successfully');
         navigate('/');
       } catch (error) {
@@ -70,7 +56,7 @@ export default function IssueDetail() {
 
   const handleUpdate = async () => {
     try {
-      const updated = await updateIssue(id!, editForm);
+      const updated = await updateIssue(id, editForm);
       setIssue(prev => prev ? { ...prev, ...updated } : null);
       setIsEditing(false);
     } catch (error) {
@@ -82,8 +68,12 @@ export default function IssueDetail() {
   if (loading) return <div className="p-8 text-center text-neutral-500">Loading details...</div>;
   if (!issue) return <div className="p-8 text-center text-red-500">Issue not found.</div>;
 
-  const StatusIcon = statusConfig[issue.status].icon;
-  const isOwner = currentUserId === issue.reportedBy || currentUserId === 'admin_id_placeholder'; // Simplistic check
+  const StatusIcon = statusConfig[issue.status] ? statusConfig[issue.status].icon : AlertTriangle;
+  // Fallback for missing status config
+  const statusColor = statusConfig[issue.status] ? statusConfig[issue.status].color : 'text-gray-600';
+  const statusLabel = statusConfig[issue.status] ? statusConfig[issue.status].label : issue.status;
+
+  const isOwner = currentUserId === issue.reportedBy || currentUserId === 'admin_id_placeholder'; 
 
   return (
     <div className="container py-4">
@@ -127,8 +117,8 @@ export default function IssueDetail() {
                 'bg-danger bg-opacity-10'
               }`}>
                <div className="d-flex align-items-center gap-2">
-                 <StatusIcon size={20} className={statusConfig[issue.status].color.replace('text-', 'text-')} />
-                 <span className={`fw-bold ${statusConfig[issue.status].color.replace('text-', 'text-')}`}>{statusConfig[issue.status].label}</span>
+                 <StatusIcon size={20} className={statusColor.replace('text-', 'text-')} />
+                 <span className={`fw-bold ${statusColor.replace('text-', 'text-')}`}>{statusLabel}</span>
                </div>
                <span className="small text-muted fw-bold text-uppercase opacity-75">ID: {issue.id.slice(0, 8)}</span>
             </div>
@@ -245,9 +235,9 @@ export default function IssueDetail() {
                  <div className="col-md-6">
                    <div className="card border-0 shadow-sm rounded-3 overflow-hidden hover-lift transition-all" style={{ height: '300px' }}>
                       <MapComponent 
-                        center={{ lat: (issue as any).location?.coordinates?.[1] || 40.7128, lng: (issue as any).location?.coordinates?.[0] || -74.0060 }}
+                        center={{ lat: issue.location?.coordinates?.[1] || 40.7128, lng: issue.location?.coordinates?.[0] || -74.0060 }}
                         zoom={15}
-                        markers={[{ lat: (issue as any).location?.coordinates?.[1] || 40.7128, lng: (issue as any).location?.coordinates?.[0] || -74.0060 }]}
+                        markers={[{ lat: issue.location?.coordinates?.[1] || 40.7128, lng: issue.location?.coordinates?.[0] || -74.0060 }]}
                       />
                    </div>
                  </div>

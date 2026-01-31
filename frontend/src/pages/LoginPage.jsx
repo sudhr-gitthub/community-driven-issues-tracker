@@ -7,7 +7,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -17,7 +17,7 @@ export default function LoginPage() {
     password: ''
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -39,7 +39,7 @@ export default function LoginPage() {
       // Redirect
       navigate('/profile');
       window.location.reload(); // Force reload to update Layout state
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       setError(err.response?.data?.error || 'Authentication failed');
     } finally {
@@ -204,48 +204,8 @@ export default function LoginPage() {
                 </svg>
                 Facebook
               </button>
-
-              <button 
-                type="button" 
-                className="btn btn-outline-secondary fw-semibold d-flex align-items-center justify-content-center gap-2 bg-white"
-                onClick={() => alert('Twitter login coming soon!')}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="#1DA1F2" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z" fill="#1DA1F2"/>
-                </svg>
-                Twitter
-              </button>
-
-              <button 
-                type="button" 
-                className="btn btn-outline-secondary fw-semibold d-flex align-items-center justify-content-center gap-2 bg-white"
-                onClick={() => alert('Outlook login coming soon!')}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                   <rect x="2" y="5" width="20" height="14" rx="2" fill="#0078D4"/>
-                   <path d="M22 6.9L12 14 2 6.9V5c0-1.1.9-2 2-2h16c1.1 0 2 .9 2 2v1.9z" fill="#50D9FF"/>
-                   <path d="M22 5v.5l-10 7-10-7V5c0-1.1.9-2 2-2h16c1.1 0 2 .9 2 2z" fill="#0078D4"/>
-                   <path d="M12 14l10-7.1V17c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6.9L12 14z" fill="white" fillOpacity="0.8"/>
-                </svg>
-                Outlook
-              </button>
             </div>
           </div>
-        </div>
-
-        <div className="text-center mt-4">
-          <p className="small text-muted mb-0">
-            {isLogin ? "Don't have an account?" : "Already have an account?"}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin); 
-                setError(null);
-              }}
-              className="btn btn-link btn-sm fw-bold text-decoration-none ms-1 p-0 align-baseline"
-            >
-              {isLogin ? 'Register' : 'Login'}
-            </button>
-          </p>
         </div>
       </div>
     </div>

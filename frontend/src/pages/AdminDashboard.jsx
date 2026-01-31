@@ -3,18 +3,10 @@ import { getIssues, updateIssueStatus } from '../services/api';
 import { Shield, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-interface Issue {
-  id: string;
-  title: string;
-  category: string;
-  status: string;
-  createdAt: string;
-}
-
 export default function AdminDashboard() {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [updating, setUpdating] = useState<string | null>(null);
+  const [updating, setUpdating] = useState(null);
 
   useEffect(() => {
     loadIssues();
@@ -27,7 +19,7 @@ export default function AdminDashboard() {
       .finally(() => setLoading(false));
   };
 
-  const handleStatusChange = async (id: string, newStatus: string) => {
+  const handleStatusChange = async (id, newStatus) => {
     setUpdating(id);
     try {
       await updateIssueStatus(id, newStatus);

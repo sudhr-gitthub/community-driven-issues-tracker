@@ -6,34 +6,30 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { authenticateToken } from './middleware/authMiddleware.js';
+import { createClient } from '@supabase/supabase-js';
+import multer from 'multer';
+
+dotenv.config();
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { authenticateToken, AuthRequest } from './middleware/authMiddleware';
+const app = express();
+const prisma = new PrismaClient();
+const PORT = process.env.PORT || 3000;
 
 // Initialize Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-dotenv.config();
-
-const app = express();
-const prisma = new PrismaClient();
-const PORT = process.env.PORT || 3000;
-
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static('uploads')); // Keep for backward compatibility
+app.use('/uploads', express.static('uploads'));
 
-// Configure Supabase
-import { createClient } from '@supabase/supabase-js';
-import multer from 'multer';
-
-const supabaseUrl = process.env.SUPABASE_URL!;
-const supabaseKey = process.env.SUPABASE_SERVICE_KEY!;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Ensure bucket exists
 async function createBucket() {
   const { data, error } = await supabase.storage.getBucket('evidence');
   if (error) {
@@ -47,9 +43,7 @@ async function createBucket() {
 }
 createBucket();
 
-// Use Memory Storage for Multer (Upload to Supabase Buffer)
 const storage = multer.memoryStorage();
-
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2GB limit
@@ -62,7 +56,6 @@ const upload = multer({
   }
 });
 
-// Validation Schema
 const createIssueSchema = z.object({
   title: z.string().min(3),
   description: z.string().optional(),
@@ -72,7 +65,6 @@ const createIssueSchema = z.object({
   images: z.array(z.string()).optional(),
 });
 
-// Helper: Ensure Anonymous User Exists
 async function getAnonymousUser() {
   const email = 'anonymous@civic.com';
   let user = await prisma.user.findUnique({ where: { email } });
@@ -90,19 +82,16 @@ async function getAnonymousUser() {
   return user;
 }
 
-// Health Check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date() });
 });
 
-// File Upload Endpoint
 app.post('/api/upload', upload.single('file'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: 'No file uploaded' });
     }
 
-    // Sanitize filename to remove special characters
     const sanitizedOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `${Date.now()}-${sanitizedOriginalName}`;
     
@@ -127,7 +116,6 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-// GET Issues
 app.get('/api/issues', async (req, res) => {
   try {
     const issues = await prisma.issue.findMany({
@@ -140,7 +128,6 @@ app.get('/api/issues', async (req, res) => {
   }
 });
 
-// GET Issue by ID
 app.get('/api/issues/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -159,7 +146,6 @@ app.get('/api/issues/:id', async (req, res) => {
   }
 });
 
-// GET Issues by User
 app.get('/api/users/:userId/issues', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -174,24 +160,18 @@ app.get('/api/users/:userId/issues', async (req, res) => {
   }
 });
 
-
-// Mock AI Analysis Service
-// Real AI Analysis Service using Gemini
-async function analyzeWithGemini(fileUrl: string | undefined, description: string = ''): Promise<{ status: string, confidence: number, analysis: string }> {
+async function analyzeWithGemini(fileUrl, description = '') {
   if (!fileUrl) {
     return { status: 'UNCERTAIN', confidence: 0, analysis: 'No evidence provided for analysis.' };
   }
 
   try {
-    // 1. Fetch the file from Supabase public URL
     const response = await fetch(fileUrl);
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Determine mime type (simple check based on extension or response header)
     const mimeType = response.headers.get('content-type') || 'image/jpeg';
 
-    // 2. Prepare for Gemini
     const prompt = `
       Analyze this image or video of a reported civic issue (e.g., pothole, garbage, broken street light).
       Your task is to verify if this is a REAL civic issue or if it looks FAKE / AI-generated / Unrelated.
@@ -217,7 +197,6 @@ async function analyzeWithGemini(fileUrl: string | undefined, description: strin
     ]);
 
     const responseText = result.response.text();
-    // Clean markdown code blocks if present
     const cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
     const parsed = JSON.parse(cleanJson);
 
@@ -229,7 +208,6 @@ async function analyzeWithGemini(fileUrl: string | undefined, description: strin
 
   } catch (error) {
     console.error('Gemini Analysis Error:', error);
-    // Fallback if AI fails (don't block submission)
     return {
       status: 'UNCERTAIN',
       confidence: 0,
@@ -238,27 +216,23 @@ async function analyzeWithGemini(fileUrl: string | undefined, description: strin
   }
 }
 
-// POST Issue (Protected)
-app.post('/api/issues', authenticateToken, async (req: AuthRequest, res: any) => {
+app.post('/api/issues', authenticateToken, async (req, res) => {
   try {
-    const userId = req.user?.userId; // From Auth Middleware
+    const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
     const validation = createIssueSchema.safeParse(req.body);
     
     if (!validation.success) {
-       return res.status(400).json({ error: (validation.error as any).errors });
+       return res.status(400).json({ error: validation.error.errors });
     }
 
     const data = validation.data;
     const id = randomUUID();
 
-    // Perform AI Verification on the first image
     const firstImage = data.images && data.images.length > 0 ? data.images[0] : undefined;
     const aiResult = await analyzeWithGemini(firstImage, data.description);
 
-    // Use raw query to insert PostGIS data
-    // Cast numbers explicitly to ensure TS knows they are values
     const lng = Number(data.longitude);
     const lat = Number(data.latitude);
     const aiStat = String(aiResult.status);
@@ -291,13 +265,11 @@ app.post('/api/issues', authenticateToken, async (req: AuthRequest, res: any) =>
   }
 });
 
-// OR: PATCH Status Update
 app.patch('/api/issues/:id/status', async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
     
-    // Simple validation
     const validStatuses = ['REPORTED', 'IN_PROGRESS', 'RESOLVED', 'REJECTED'];
     if (!validStatuses.includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
@@ -315,7 +287,6 @@ app.patch('/api/issues/:id/status', async (req, res) => {
   }
 });
 
-// Register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { email, password, name, username, phoneNumber } = req.body;
@@ -358,7 +329,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { identifier, password } = req.body;
@@ -367,7 +337,6 @@ app.post('/api/auth/login', async (req, res) => {
        return res.status(400).json({ error: 'Missing credentials' });
     }
 
-    // Find user by Email OR Username OR Phone
     const user = await prisma.user.findFirst({
       where: {
         OR: [
@@ -395,17 +364,15 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// DELETE Issue (Protected)
-app.delete('/api/issues/:id', authenticateToken, async (req: AuthRequest, res: any) => {
+app.delete('/api/issues/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params as any;
-    const userId = req.user?.userId as string;
+    const { id } = req.params;
+    const userId = req.user?.userId;
 
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    // Check ownership
     const issue = await prisma.issue.findUnique({ where: { id } });
     if (!issue) return res.status(404).json({ error: 'Issue not found' });
 
@@ -421,12 +388,11 @@ app.delete('/api/issues/:id', authenticateToken, async (req: AuthRequest, res: a
   }
 });
 
-// UPDATE Issue (Protected)
-app.put('/api/issues/:id', authenticateToken, async (req: AuthRequest, res: any) => {
+app.put('/api/issues/:id', authenticateToken, async (req, res) => {
   try {
-    const { id } = req.params as any;
+    const { id } = req.params;
     const { title, description, category } = req.body;
-    const userId = req.user?.userId as string;
+    const userId = req.user?.userId;
 
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
 
@@ -454,7 +420,6 @@ app.put('/api/issues/:id', authenticateToken, async (req: AuthRequest, res: any)
   }
 });
 
-// Start Server
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });

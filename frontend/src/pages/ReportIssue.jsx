@@ -8,14 +8,7 @@ export default function ReportIssue() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [formData, setFormData] = useState<{
-    title: string;
-    description: string;
-    category: string;
-    latitude: number;
-    longitude: number;
-    images: string[];
-  }>({
+  const [formData, setFormData] = useState({
     title: '',
     description: '',
     category: 'Road',
@@ -24,7 +17,7 @@ export default function ReportIssue() {
     images: [],
   });
   
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       setUploading(true);
@@ -58,7 +51,7 @@ export default function ReportIssue() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
@@ -136,7 +129,7 @@ export default function ReportIssue() {
                             alt="Evidence" 
                             className="img-fluid rounded-3 shadow-sm" 
                             style={{ maxHeight: '200px' }} 
-                          />
+                            />
                         )}
                         <button
                           type="button"

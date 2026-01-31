@@ -4,17 +4,8 @@ import { getIssues } from '../services/api';
 import { MapPin, Clock, AlertCircle } from 'lucide-react';
 import MapComponent from '../components/MapComponent';
 
-interface Issue {
-  id: string;
-  title: string;
-  category: string;
-  status: 'REPORTED' | 'IN_PROGRESS' | 'RESOLVED' | 'REJECTED';
-  location: any;
-  createdAt: string;
-}
-
 export default function Home() {
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -24,7 +15,7 @@ export default function Home() {
       .finally(() => setLoading(false));
   }, []);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status) => {
     switch (status) {
       case 'REPORTED': return 'bg-status-reported/10 text-status-reported border-status-reported/20';
       case 'IN_PROGRESS': return 'bg-status-inprogress/10 text-status-inprogress border-status-inprogress/20';
@@ -44,8 +35,8 @@ export default function Home() {
       <div className="card border-0 shadow-sm mb-5 rounded-4 overflow-hidden" style={{ height: '400px' }}>
         <MapComponent 
           markers={issues.map(i => ({ 
-            lat: (i.location as any)?.coordinates?.[1] || 40.7128, 
-            lng: (i.location as any)?.coordinates?.[0] || -74.0060,
+            lat: i.location?.coordinates?.[1] || 40.7128, 
+            lng: i.location?.coordinates?.[0] || -74.0060,
             id: i.id 
           }))}
         />
