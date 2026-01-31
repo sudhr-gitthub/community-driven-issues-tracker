@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginUser, registerUser } from '../services/api';
-import { Lock, User, Mail, ArrowRight, Loader2, Phone, AtSign } from 'lucide-react';
+import { Lock, User, Mail, ArrowRight, Loader2, Phone } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
