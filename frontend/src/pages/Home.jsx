@@ -3,10 +3,27 @@ import { Link } from 'react-router-dom';
 import { getIssues } from '../services/api';
 import { MapPin, Clock, AlertCircle } from 'lucide-react';
 import MapComponent from '../components/MapComponent';
+import SkeletonCard from '../components/SkeletonCard';
+import { calculateDistance } from '../utils/location';
 
 export default function Home() {
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
+
+  useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+        },
+        (error) => console.log('Location access denied or error:', error)
+      );
+    }
+  }, []);
 
   useEffect(() => {
     getIssues()
@@ -27,8 +44,8 @@ export default function Home() {
   return (
     <div className="container py-4">
       <header className="mb-5 text-center text-md-start">
-        <h1 className="display-6 fw-bold text-dark">Community Issues</h1>
-        <p className="text-secondary lead fs-6">Updates on local infrastructure and services.</p>
+        <h1 className="display-6 fw-bold text-dark dark:text-neutral-50 mb-2">Community Issues</h1>
+        <p className="text-secondary dark:text-neutral-400 lead fs-6">Updates on local infrastructure and services.</p>
       </header>
 
       {/* Map View */}
@@ -37,7 +54,8 @@ export default function Home() {
           markers={issues.map(i => ({ 
             lat: i.location?.coordinates?.[1] || 40.7128, 
             lng: i.location?.coordinates?.[0] || -74.0060,
-            id: i.id 
+            id: i.id,
+            status: i.status 
           }))}
         />
       </div>
@@ -45,18 +63,9 @@ export default function Home() {
       {/* Issue Feed */}
       <div className="row g-4">
         {loading ? (
-          [...Array(3)].map((_, i) => (
+          [...Array(6)].map((_, i) => (
             <div key={i} className="col-md-6 col-lg-4">
-               <div className="card h-100 border-0 shadow-sm">
-                  <div className="card-body p-4 placeholder-glow">
-                     <span className="placeholder col-7 mb-3"></span>
-                     <span className="placeholder col-4"></span>
-                     <div className="mt-4">
-                        <span className="placeholder col-12 mb-2"></span>
-                        <span className="placeholder col-8"></span>
-                     </div>
-                  </div>
-               </div>
+               <SkeletonCard />
             </div>
           ))
         ) : issues.length === 0 ? (
@@ -72,32 +81,50 @@ export default function Home() {
         ) : (
           issues.map((issue) => (
             <div className="col-md-6 col-lg-4" key={issue.id}>
-              <Link to={`/issues/${issue.id}`} className="card h-100 border-0 shadow-sm text-decoration-none hover-up transition overflow-hidden">
-                <div className="position-relative bg-light" style={{ height: '160px' }}>
+              <Link to={`/issues/${issue.id}`} className="card h-100 border-0 shadow-sm text-decoration-none hover-up transition overflow-hidden dark:bg-neutral-800 dark:border-neutral-700">
+                <div className="position-relative bg-light dark:bg-neutral-700" style={{ height: '160px' }}>
                   {/* Image Placeholder */}
-                  <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center text-muted small fw-medium">
-                    No Image
-                  </div>
+                  {/* Image Display */}
+                  {issue.images && issue.images.length > 0 ? (
+                    <img 
+                      src={issue.images[0]} 
+                      alt={issue.title} 
+                      className="w-100 h-100 object-fit-cover"
+                    />
+                  ) : (
+                    <div className="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center text-muted small fw-medium">
+                      No Image
+                    </div>
+                  )}
                   <div className={`position-absolute top-0 end-0 m-2 px-2 py-1 rounded-pill small fw-bold border ${getStatusColor(issue.status)}`}>
                     {issue.status.replace('_', ' ')}
                   </div>
                 </div>
-                <div className="card-body p-4">
+                  <div className="card-body p-4">
                   <div className="small fw-bold text-primary text-uppercase letter-spacing-1 mb-2">
                     {issue.category}
                   </div>
-                  <h3 className="h5 fw-bold text-dark mb-3 text-truncate">
+                  <h3 className="h5 fw-bold text-dark dark:text-white mb-3 text-truncate">
                     {issue.title}
                   </h3>
-                  <div className="d-flex align-items-center justify-content-between mt-auto pt-2 border-top border-light">
-                    <div className="d-flex align-items-center text-muted small gap-1">
+                  <div className="d-flex align-items-center justify-content-between mt-auto pt-2 border-top border-light dark:border-neutral-700">
+                    <div className="d-flex align-items-center text-muted dark:text-neutral-400 small gap-1">
                       <Clock size={14} />
                       <span>{new Date(issue.createdAt).toLocaleDateString()}</span>
                     </div>
                     {/* Distance Placeholder */}
-                    <div className="d-flex align-items-center text-muted small gap-1">
+                    <div className="d-flex align-items-center text-muted dark:text-neutral-400 small gap-1">
                       <MapPin size={14} />
-                      <span>0.5 km</span>
+                      <span>
+                        {userLocation 
+                          ? calculateDistance(
+                              userLocation.lat, 
+                              userLocation.lng, 
+                              issue.location?.coordinates?.[1], 
+                              issue.location?.coordinates?.[0]
+                            ) || 'N/A'
+                          : '...'}
+                      </span>
                     </div>
                   </div>
                 </div>

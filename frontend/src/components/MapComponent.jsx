@@ -11,6 +11,12 @@ const defaultCenter = {
   lng: -73.935242
 };
 
+const STATUS_COLORS = {
+  'REPORTED': '#EF4444',    // Red
+  'IN_PROGRESS': '#EAB308', // Yellow
+  'RESOLVED': '#22C55E'     // Green
+};
+
 export default function MapComponent({ markers = [], onMapClick, center, zoom = 12 }) {
   const { isLoaded } = useJsApiLoader({
     id: 'google-map-script',
@@ -48,7 +54,15 @@ export default function MapComponent({ markers = [], onMapClick, center, zoom = 
       {markers.map((marker, index) => (
         <Marker 
           key={marker.id || index}
-          position={{ lat: marker.lat, lng: marker.lng }} 
+          position={{ lat: marker.lat, lng: marker.lng }}
+          icon={{
+            path: window.google?.maps?.SymbolPath?.CIRCLE,
+            fillColor: STATUS_COLORS[marker.status] || '#EF4444',
+            fillOpacity: 0.9,
+            scale: 7,
+            strokeColor: 'white',
+            strokeWeight: 2,
+          }}
         />
       ))}
     </GoogleMap>

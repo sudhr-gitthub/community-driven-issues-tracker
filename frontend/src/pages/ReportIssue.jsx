@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Camera, MapPin, Loader2, CheckCircle } from 'lucide-react';
+import confetti from 'canvas-confetti';
 import { createIssue } from '../services/api';
 import MapComponent from '../components/MapComponent';
 
@@ -16,6 +17,11 @@ export default function ReportIssue() {
     longitude: 0,
     images: [],
   });
+
+
+  useEffect(() => {
+    detectLocation();
+  }, []);
   
   const handleFileChange = async (e) => {
     if (e.target.files && e.target.files[0]) {
@@ -40,11 +46,15 @@ export default function ReportIssue() {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          setFormData(prev => ({
-            ...prev,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          }));
+          setFormData(prev => {
+             // If user already selected a location manually (non-zero), don't overwrite
+             if (prev.latitude !== 0 || prev.longitude !== 0) return prev;
+             return {
+              ...prev,
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude
+            };
+          });
         },
         (error) => console.error("Location error", error)
       );
@@ -53,6 +63,12 @@ export default function ReportIssue() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (formData.latitude === 0 && formData.longitude === 0) {
+      alert("Please select a location on the map.");
+      return;
+    }
+
     setLoading(true);
     try {
       const data = await createIssue(formData);
@@ -60,7 +76,17 @@ export default function ReportIssue() {
       if (data.reportedBy) {
         localStorage.setItem('civic_user_id', data.reportedBy);
       }
-      navigate('/');
+      
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#2563eb', '#3b82f6', '#60a5fa', '#ffffff']
+      });
+
+      // Small delay to enjoy the confetti
+      setTimeout(() => navigate('/'), 1500);
+
     } catch (error) {
       console.error('Failed to submit issue', error);
       alert('Failed to submit issue. Please try again.');

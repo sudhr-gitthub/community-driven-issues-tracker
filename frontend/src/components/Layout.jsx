@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { PlusCircle, Map, Home, LogIn, LogOut } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 export default function Layout() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ export default function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-neutral-100 font-sans text-neutral-900">
+    <div className="min-h-screen bg-neutral-100 dark:bg-neutral-900 font-sans text-neutral-900 dark:text-neutral-50 transition-colors duration-200">
       {/* Top Navigation */}
       <nav className="bg-primary-700 text-white shadow-md sticky top-0 z-50">
         <div className="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -22,8 +23,10 @@ export default function Layout() {
             <Map className="w-6 h-6 text-primary-100" />
             <span>CivicTracker</span>
           </Link>
-          
-          <div className="hidden md:flex items-center gap-6">
+
+          <div className="flex items-center gap-4">
+             <ThemeToggle />
+             <div className="hidden md:flex items-center gap-6">
             <Link to="/" className="hover:text-primary-100 font-medium transition">Home</Link>
             <Link to="/profile" className="hover:text-primary-100 font-medium transition">Profile</Link>
             <Link to="/admin" className="hover:text-primary-100 font-medium transition">Admin</Link>
@@ -45,6 +48,7 @@ export default function Layout() {
               <PlusCircle className="w-4 h-4" />
               Report
             </Link>
+             </div>
           </div>
         </div>
       </nav>

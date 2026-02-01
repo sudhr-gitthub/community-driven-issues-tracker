@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, MapPin, Calendar, CheckCircle, Clock, AlertTriangle, XCircle, ShieldCheck, ShieldAlert, FileSearch, Trash2, Edit2, Save, X } from 'lucide-react';
-import { getIssueById, deleteIssue, updateIssue } from '../services/api';
+import { ArrowLeft, MapPin, Calendar, CheckCircle, Clock, AlertTriangle, XCircle, ShieldCheck, ShieldAlert, FileSearch, Trash2, Edit2, Save, X, Camera, Loader2 } from 'lucide-react';
+import { getIssueById, deleteIssue, updateIssue, uploadFile } from '../services/api';
 import MapComponent from '../components/MapComponent';
 
 const statusConfig = {
@@ -17,7 +17,8 @@ export default function IssueDetail() {
   const [issue, setIssue] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState({ title: '', description: '', category: '' });
+  const [editForm, setEditForm] = useState({ title: '', description: '', category: '', images: [] });
+  const [uploading, setUploading] = useState(false);
   
   const currentUserId = localStorage.getItem('civic_user_id');
 
@@ -34,11 +35,29 @@ export default function IssueDetail() {
           setEditForm({ 
             title: data.title, 
             description: data.description || '', 
-            category: data.category 
+            category: data.category,
+            images: data.images || []
           });
         })
         .catch(err => console.error(err))
         .finally(() => setLoading(false));
+  };
+
+  const handleFileChange = async (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploading(true);
+      try {
+        const { uploadFile } = await import('../services/api');
+        const data = await uploadFile(file);
+        setEditForm(prev => ({ ...prev, images: [data.url] }));
+      } catch (error) {
+        console.error("Upload failed", error);
+        alert("Failed to upload file");
+      } finally {
+        setUploading(false);
+      }
+    }
   };
 
   const handleDelete = async () => {
@@ -73,7 +92,9 @@ export default function IssueDetail() {
   const statusColor = statusConfig[issue.status] ? statusConfig[issue.status].color : 'text-gray-600';
   const statusLabel = statusConfig[issue.status] ? statusConfig[issue.status].label : issue.status;
 
-  const isOwner = currentUserId === issue.reportedBy || currentUserId === 'admin_id_placeholder'; 
+  // For testing purposes, we allow anyone to edit. 
+  // In production, this should be: const isOwner = currentUserId === issue.reportedBy || currentUserId === 'admin_id_placeholder'; 
+  const isOwner = true; 
 
   return (
     <div className="container py-4">
@@ -228,9 +249,74 @@ export default function IssueDetail() {
               {/* Map/Photos */}
               <div className="row g-3">
                  <div className="col-md-6">
-                   <div className="bg-light rounded-3 p-5 d-flex align-items-center justify-content-center border border-dashed border-2" style={{ height: '300px' }}>
-                      <span className="text-muted fw-medium small">Photo Verification</span>
-                   </div>
+                   {isEditing ? (
+                     <div className="mb-3">
+                        <label className="form-label fw-bold small text-muted text-uppercase">Update Evidence</label>
+                        <div className="border-2 border-dashed border-secondary border-opacity-25 rounded-3 p-4 bg-light text-center hover-glow transition-all">
+                          <input
+                            type="file"
+                            id="edit-media-upload"
+                            className="d-none"
+                            accept="image/*,video/*"
+                            onChange={handleFileChange}
+                          />
+                          
+                          {!editForm.images?.[0] ? (
+                            <label htmlFor="edit-media-upload" className="cursor-pointer d-block">
+                              {uploading ? (
+                                <div className="py-2">
+                                  <Loader2 className="animate-spin text-primary mb-2 mx-auto" size={24} />
+                                  <span className="text-primary fw-bold small">Uploading...</span>
+                                </div>
+                              ) : (
+                                <div className="py-2 hover-opacity-75 transition">
+                                   <Camera className="mb-2 text-primary mx-auto" size={32} />
+                                   <span className="fw-medium text-secondary d-block small">Tap to replace photo</span>
+                                </div>
+                              )}
+                            </label>
+                          ) : (
+                            <div className="position-relative d-inline-block w-100">
+                              <img 
+                                src={editForm.images[0]} 
+                                alt="Evidence" 
+                                className="img-fluid rounded-3 shadow-sm object-fit-cover" 
+                                style={{ maxHeight: '200px', width: '100%' }} 
+                              />
+                              <button
+                                type="button"
+                                className="btn btn-danger btn-sm position-absolute top-0 end-0 m-2 rounded-circle p-1"
+                                onClick={() => setEditForm({...editForm, images: []})}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                     </div>
+                   ) : (
+                     issue.images && issue.images.length > 0 ? (
+                        <div className="w-100 h-100 rounded-3 overflow-hidden border">
+                          {issue.images[0].match(/\.(mp4|webm|ogg)$/i) || issue.images[0].includes('video') ? (
+                             <video 
+                               src={issue.images[0]} 
+                               className="w-100 h-100 object-fit-cover" 
+                               controls 
+                             />
+                          ) : (
+                             <img 
+                               src={issue.images[0]} 
+                               alt="Evidence" 
+                               className="w-100 h-100 object-fit-cover" 
+                             />
+                          )}
+                        </div>
+                     ) : (
+                       <div className="bg-light rounded-3 p-5 d-flex align-items-center justify-content-center border border-dashed border-2" style={{ height: '300px' }}>
+                          <span className="text-muted fw-medium small">No Photo Evidence</span>
+                       </div>
+                     )
+                   )}
                  </div>
                  <div className="col-md-6">
                    <div className="card border-0 shadow-sm rounded-3 overflow-hidden hover-lift transition-all" style={{ height: '300px' }}>

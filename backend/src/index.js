@@ -8,8 +8,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { authenticateToken } from './middleware/authMiddleware.js';
+import { authenticateToken } from './middleware/authMiddleware.js';
 import { createClient } from '@supabase/supabase-js';
 import multer from 'multer';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -25,6 +27,21 @@ const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
+
+// Rate Limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+app.use('/api/', apiLimiter);
+
+const createIssueLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Limit each IP to 10 created issues per hour
+  message: { error: 'Too many reports created from this IP, please try again after an hour' }
+});
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_KEY;
@@ -44,6 +61,7 @@ async function createBucket() {
 createBucket();
 
 const storage = multer.memoryStorage();
+
 const upload = multer({ 
   storage: storage,
   limits: { fileSize: 2 * 1024 * 1024 * 1024 }, // 2GB limit
@@ -95,6 +113,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
     const sanitizedOriginalName = req.file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_');
     const fileName = `${Date.now()}-${sanitizedOriginalName}`;
     
+    // Upload to Supabase
     const { data, error } = await supabase.storage
       .from('evidence')
       .upload(fileName, req.file.buffer, {
@@ -105,6 +124,7 @@ app.post('/api/upload', upload.single('file'), async (req, res) => {
       throw error;
     }
 
+    // Get Public URL
     const { data: { publicUrl } } = supabase.storage
       .from('evidence')
       .getPublicUrl(fileName);
@@ -182,6 +202,7 @@ async function analyzeWithGemini(fileUrl, description = '') {
       - status: "REAL" | "FAKE" | "UNCERTAIN"
       - confidence: number between 0.0 and 1.0
       - analysis: A short explanation (max 1 sentence).
+      - suggestedCategory: "Road" | "Water" | "Electricity" | "Sanitation" | "Other" (Choose the best fit)
       
       JSON Only.
     `;
@@ -203,7 +224,8 @@ async function analyzeWithGemini(fileUrl, description = '') {
     return {
       status: parsed.status,
       confidence: parsed.confidence,
-      analysis: parsed.analysis
+      analysis: parsed.analysis,
+      suggestedCategory: parsed.suggestedCategory || 'Other'
     };
 
   } catch (error) {
@@ -216,7 +238,7 @@ async function analyzeWithGemini(fileUrl, description = '') {
   }
 }
 
-app.post('/api/issues', authenticateToken, async (req, res) => {
+app.post('/api/issues', authenticateToken, createIssueLimiter, async (req, res) => {
   try {
     const userId = req.user?.userId;
     if (!userId) return res.status(401).json({ error: 'Unauthorized' });
@@ -233,11 +255,42 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
     const firstImage = data.images && data.images.length > 0 ? data.images[0] : undefined;
     const aiResult = await analyzeWithGemini(firstImage, data.description);
 
+    let finalCategory = data.category;
+    // AI Auto-Categorization Logic
+    // If user selected 'Other' (or nothing specific) and AI is confident, use AI's suggestion.
+    if (finalCategory === 'Other' && aiResult.suggestedCategory && aiResult.suggestedCategory !== 'Other') {
+         if (aiResult.confidence > 0.7) {
+            console.log(`Auto-categorizing from ${finalCategory} to ${aiResult.suggestedCategory}`);
+            finalCategory = aiResult.suggestedCategory;
+         }
+    }
+
     const lng = Number(data.longitude);
     const lat = Number(data.latitude);
     const aiStat = String(aiResult.status);
     const aiConf = Number(aiResult.confidence);
     const aiAnal = String(aiResult.analysis);
+
+    // Smart Duplicate Detection: Check for existing issues within 20 meters
+    const duplicates = await prisma.$queryRaw`
+      SELECT id, title, st_astext(location) as location_text 
+      FROM "issues" 
+      WHERE ST_DWithin(
+        location, 
+        ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), 
+        20
+      )
+      AND status NOT IN ('RESOLVED', 'REJECTED')
+      LIMIT 1;
+    `;
+
+    if (duplicates.length > 0) {
+      console.log('Duplicate detected:', duplicates[0].id);
+      return res.status(409).json({ 
+        error: 'A similar issue has already been reported here.', 
+        existingIssueId: duplicates[0].id 
+      });
+    }
 
     await prisma.$executeRaw`
       INSERT INTO "issues" (
@@ -246,7 +299,7 @@ app.post('/api/issues', authenticateToken, async (req, res) => {
         "aiStatus", "aiConfidence", "aiAnalysis"
       )
       VALUES (
-        ${id}, ${data.title}, ${data.description || ''}, ${data.category}, 'REPORTED'::"Status", 
+        ${id}, ${data.title}, ${data.description || ''}, ${finalCategory}, 'REPORTED'::"Status", 
         ${userId}, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326), 
         ${data.images || []}, NOW(), NOW(),
         ${aiStat}::"AiStatus", ${aiConf}, ${aiAnal}
@@ -409,6 +462,7 @@ app.put('/api/issues/:id', authenticateToken, async (req, res) => {
         title: String(title), 
         description: String(description), 
         category: String(category),
+        images: req.body.images || issue.images,
         updatedAt: new Date()
       }
     });
