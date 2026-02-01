@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Community Driven Issues Tracker 🏙️
 
 A robust civic engagement platform enabling citizens to report local issues (like potholes, garbage, broken streetlights) with location tagging and AI-powered verification.
